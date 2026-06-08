@@ -35,4 +35,19 @@ return [
         ],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | FastAPI — AI / ML Inference Service
+    |--------------------------------------------------------------------------
+    |
+    | Connection settings for the external FastAPI service that runs
+    | medical image diagnostics via a Machine Learning model.
+    |
+    */
+    'fastapi' => [
+        'base_url' => env('FASTAPI_BASE_URL', 'http://localhost:8000'),
+        'api_key'  => env('FASTAPI_API_KEY', ''),
+        'timeout'  => (int) env('FASTAPI_TIMEOUT', 30),
+    ],
+
 ];
