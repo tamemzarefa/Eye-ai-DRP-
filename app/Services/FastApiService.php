@@ -1,9 +1,12 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services;
 
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\Response;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -103,6 +106,61 @@ class FastApiService
 
             return false;
         }
+    }
+
+    /**
+     * Forward an eye image to the FastAPI Diabetic Retinopathy
+     * prediction endpoint: POST /predict
+     *
+     * The FastAPI server expects:
+     *   - Content-Type : multipart/form-data
+     *   - Field name   : `file`   ← MUST match the Python parameter name
+     *
+     * The endpoint returns JSON:
+     *   { "prediction": "No DR", "confidence": 0.9724 }
+     *
+     * @param  UploadedFile                $image   The validated uploaded file.
+     * @return array{prediction: string, confidence: float}
+     *
+     * @throws \Illuminate\Http\Client\RequestException  On 4xx / 5xx responses.
+     * @throws \Throwable                                On connection failure.
+     */
+    public function analyzeEyeImage(UploadedFile $image): array
+    {
+        // Read the raw binary content of the file from its temporary path.
+        // getRealPath() is safe here because the file has already been
+        // validated by AnalyzeEyeImageRequest before reaching this method.
+        $fileContents = file_get_contents($image->getRealPath());
+        $filename     = $image->getClientOriginalName();
+        $mimeType     = $image->getMimeType() ?? 'image/jpeg';
+
+        Log::info('FastApiService: Forwarding eye image to /predict.', [
+            'filename'  => $filename,
+            'mime_type' => $mimeType,
+            'size_kb'   => round(strlen($fileContents) / 1024, 2),
+        ]);
+
+        // Http::attach() builds the multipart/form-data body.
+        // The first argument MUST be 'file' — the FastAPI parameter name.
+        $response = $this->client()
+            ->attach(
+                name    : 'file',          // ← FastAPI field name
+                contents: $fileContents,
+                filename: $filename,
+                headers : ['Content-Type' => $mimeType],
+            )
+            ->post('/predict');
+
+        // Throw a RequestException on any 4xx / 5xx status code.
+        // The controller's try-catch will handle it and return a 503.
+        $response->throw();
+
+        Log::info('FastApiService: /predict response received.', [
+            'http_status' => $response->status(),
+        ]);
+
+        /** @var array{prediction: string, confidence: float} */
+        return $response->json();
     }
 
     // ─── Internal Helpers ─────────────────────────────────────────

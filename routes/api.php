@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AI\MedicalImagingController;
 use App\Http\Controllers\Api\PatientController;
 use Illuminate\Support\Facades\Route;
 
@@ -23,9 +24,18 @@ Route::prefix('v1')->group(function (): void {
     // ── Patient CRUD ─────────────────────────────────────────────
     Route::apiResource('patients', PatientController::class);
 
-    // ── AI Diagnostic (standalone endpoint) ──────────────────────
+    // ── AI Diagnostic (patient-scoped) ───────────────────────────
     Route::post('patients/{patient}/diagnose', [PatientController::class, 'diagnose'])
          ->name('patients.diagnose');
+
+    // ── Medical Imaging — Diabetic Retinopathy Detection ─────────
+    // POST /api/v1/medical-imaging/analyze
+    //
+    // Accepts : multipart/form-data → field `eye_image` (jpeg|png|jpg, max 10 MB)
+    // Returns : { success, message, data: { prediction, confidence } }
+    // Errors  : 422 on validation failure | 503 when FastAPI is unreachable
+    Route::post('medical-imaging/analyze', [MedicalImagingController::class, 'analyzeEyeImage'])
+         ->name('medical-imaging.analyze');
 });
 
 /*
