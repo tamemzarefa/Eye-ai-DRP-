@@ -215,37 +215,90 @@ export default function NewAnalysis() {
     setAnalyzing(true)
 
     const formData = new FormData()
-    formData.append('image', imageFile)
-    formData.append('patient_name', patientName)
-    formData.append('patient_age', patientAge)
-    formData.append('patient_id', patientId)
+    formData.append('eye_image', imageFile) // Laravel expects 'eye_image'
 
     try {
-      // TODO: استبدلي الـ URL بعنوان Laravel الحقيقي
-      // const response = await fetch('http://localhost:8000/api/analyze', {
-      //   method: 'POST',
-      //   body: formData,
-      // })
-      // const data = await response.json()
-
-      // بيانات وهمية مؤقتة لحين ربط الباك إيند
-      await new Promise(r => setTimeout(r, 1500))
-      const data = {
-        classification: 'Severe',
-        confidence: 99,
-        regions_detected: 12,
-        biomarkers: {
-          microaneurysms: 'مرتفع [x72]',
-          hemorrhages: 'نزيف الدم',
-          severity: 'متوسطة',
+      const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+      
+      const response = await fetch('/api/v1/medical-imaging/analyze', {
+        method: 'POST',
+        headers: {
+          'X-CSRF-TOKEN': csrfToken,
+          'Accept': 'application/json',
         },
-        date: new Date().toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' }),
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.message || 'فصل الاتصال بخدمة التحليل الطبية.');
       }
 
-      setResult(data)
-      setStage('result')
+      const resJson = await response.json();
+
+      if (resJson.success && resJson.data) {
+        let prediction = resJson.data.prediction;
+        const classIdx = resJson.data.class_index;
+        
+        // Map based on numerical class_index (0-4) for ultimate precision
+        const indexMapping = {
+          0: 'Negative',
+          1: 'Mild',
+          2: 'Moderate',
+          3: 'Severe',
+          4: 'Proliferative',
+        };
+
+        if (typeof classIdx === 'number' && indexMapping[classIdx] !== undefined) {
+          prediction = indexMapping[classIdx];
+        } else {
+          // Fallback string mapping in case class_index is not returned
+          const predictionMapping = {
+            'No DR (Healthy)': 'Negative',
+            'Mild DR': 'Mild',
+            'Moderate DR': 'Moderate',
+            'Severe DR': 'Severe',
+            'Proliferative DR': 'Proliferative',
+            'Negative': 'Negative',
+            'Mild': 'Mild',
+            'Moderate': 'Moderate',
+            'Severe': 'Severe',
+            'Proliferative': 'Proliferative',
+          };
+          prediction = predictionMapping[prediction] || 'Negative';
+        }
+
+        // Format confidence: if decimal float (e.g. 0.985), multiply by 100
+        let rawConfidence = resJson.data.confidence;
+        let formattedConfidence = '0';
+        if (typeof rawConfidence === 'number') {
+          if (rawConfidence <= 1.0) {
+            formattedConfidence = (rawConfidence * 100).toFixed(1);
+          } else {
+            formattedConfidence = rawConfidence.toFixed(1);
+          }
+        }
+
+        const data = {
+          classification: prediction,
+          confidence: formattedConfidence,
+          regions_detected: resJson.data.regions_detected || 0,
+          biomarkers: resJson.data.biomarkers || {
+            microaneurysms: prediction === 'Negative' ? 'سليم' : 'مكتشف',
+            hemorrhages: prediction === 'Negative' ? 'سليم' : 'مكتشف',
+            severity: prediction === 'Negative' ? 'طبيعي' : 'غير طبيعي',
+          },
+          date: resJson.data.date || new Date().toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' }),
+        };
+
+        setResult(data)
+        setStage('result')
+      } else {
+        throw new Error(resJson.message || 'حدث خطأ أثناء معالجة الصورة.');
+      }
     } catch (err) {
       console.error('خطأ بالتحليل:', err)
+      alert(err.message || 'حدث خطأ أثناء الاتصال بالخادم. يرجى المحاولة مرة أخرى.');
     } finally {
       setAnalyzing(false)
     }

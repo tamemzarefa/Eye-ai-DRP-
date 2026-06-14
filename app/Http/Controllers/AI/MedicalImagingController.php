@@ -63,7 +63,7 @@ class MedicalImagingController extends Controller
             // POST http://127.0.0.1:8000/predict using Http::attach()
             // with the field name `file` as required by FastAPI.
             //
-            /** @var array{prediction: string, confidence: float} $result */
+            /** @var array{prediction: string, confidence: float, class_index?: int} $result */
             $result = $this->fastApiService->analyzeEyeImage($image);
 
             // ── 3. Return successful JSON response ────────────────
@@ -71,8 +71,9 @@ class MedicalImagingController extends Controller
                 'success'    => true,
                 'message'    => 'Eye image analysis completed successfully.',
                 'data'       => [
-                    'prediction' => $result['prediction'],
-                    'confidence' => $result['confidence'],
+                    'prediction'  => $result['prediction'],
+                    'confidence'  => $result['confidence'],
+                    'class_index' => $result['class_index'] ?? null,
                 ],
             ], JsonResponse::HTTP_OK);  // 200
 
