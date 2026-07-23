@@ -1,8 +1,8 @@
 import { useState, useRef, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import Sidebar from '../components/Sidebar'
 
-// ========== ICONS ==========
 const UploadCloudIcon = ({ size = 36 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
     <polyline points="16 16 12 12 8 16"/>
@@ -80,88 +80,54 @@ const SaveIcon = ({ size = 15 }) => (
   </svg>
 )
 
-const ThumbUpIcon = ({ size = 14 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/>
-    <path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/>
-  </svg>
-)
-
-const ThumbDownIcon = ({ size = 14 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3H10z"/>
-    <path d="M17 2h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"/>
-  </svg>
-)
-
-// ========== درجات الخطورة ==========
 const gradeStyles = {
-  'Negative':      { label: 'طبيعي (Negative)',          bg: 'bg-green-100',  text: 'text-green-700' },
-  'Mild':          { label: 'خفيف (Mild)',                bg: 'bg-blue-100',   text: 'text-blue-700' },
-  'Moderate':      { label: 'متوسط (Moderate)',           bg: 'bg-amber-100',  text: 'text-amber-700' },
-  'Severe':        { label: 'اعتلال شديد (Grade 4)',      bg: 'bg-orange-100', text: 'text-orange-700' },
-  'Proliferative': { label: 'تكاثري (Proliferative)',     bg: 'bg-red-100',    text: 'text-red-700' },
+  'Negative':      { label: 'طبيعي (Negative)',       bg: 'bg-green-100',  text: 'text-green-700' },
+  'Mild':          { label: 'خفيف (Mild)',             bg: 'bg-blue-100',   text: 'text-blue-700' },
+  'Moderate':      { label: 'متوسط (Moderate)',        bg: 'bg-amber-100',  text: 'text-amber-700' },
+  'Severe':        { label: 'اعتلال شديد (Grade 4)',   bg: 'bg-orange-100', text: 'text-orange-700' },
+  'Proliferative': { label: 'تكاثري (Proliferative)', bg: 'bg-red-100',    text: 'text-red-700' },
 }
 
-// ========== IMAGE VIEWER (خارج الـ component الرئيسي) ==========
-function ImageViewer({ imagePreview, zoom, rotation, result, onZoomIn, onZoomOut, onRotate, onReset }) {
+function ImageViewer({ imagePreview, zoom, rotation, label, onZoomIn, onZoomOut, onRotate, onReset, children }) {
   return (
-    <div className="bg-gray-900 rounded-2xl overflow-hidden">
-      {/* شريط الأدوات */}
-      <div className="flex items-center justify-between px-4 py-2.5">
-        <div className="flex items-center gap-2">
-          <button onClick={onReset}   className="w-8 h-8 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-lg border-0 cursor-pointer transition-colors text-white"><MaximizeIcon /></button>
-          <button onClick={onRotate}  className="w-8 h-8 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-lg border-0 cursor-pointer transition-colors text-white"><RotateIcon /></button>
-          <button onClick={onZoomOut} className="w-8 h-8 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-lg border-0 cursor-pointer transition-colors text-white"><ZoomOutIcon /></button>
-          <button onClick={onZoomIn}  className="w-8 h-8 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-lg border-0 cursor-pointer transition-colors text-white"><ZoomInIcon /></button>
+    <div className="bg-gray-900 rounded-xl overflow-hidden flex flex-col">
+      <div className="flex items-center justify-between px-3 py-2">
+        <div className="flex items-center gap-1.5">
+          <button onClick={onReset}   className="w-7 h-7 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-lg border-0 cursor-pointer transition-colors text-white"><MaximizeIcon /></button>
+          <button onClick={onRotate}  className="w-7 h-7 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-lg border-0 cursor-pointer transition-colors text-white"><RotateIcon /></button>
+          <button onClick={onZoomOut} className="w-7 h-7 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-lg border-0 cursor-pointer transition-colors text-white"><ZoomOutIcon /></button>
+          <button onClick={onZoomIn}  className="w-7 h-7 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-lg border-0 cursor-pointer transition-colors text-white"><ZoomInIcon /></button>
         </div>
-        <div className="flex items-center gap-2">
-          <EyeIcon size={15} color="#f59e0b" />
-          <span className="text-white text-sm">معاينة صورة الشبكية (Fundus)</span>
+        <div className="flex items-center gap-1.5">
+          <EyeIcon size={14} color="#f59e0b" />
+          <span className="text-white text-xs">{label}</span>
         </div>
       </div>
-
-      {/* الصورة */}
-      <div className="flex items-center justify-center bg-black overflow-hidden" style={{ height: '300px' }}>
+      <div className="flex items-center justify-center bg-black overflow-hidden relative" style={{ height: '220px' }}>
         <img
           src={imagePreview}
           alt="fundus"
           style={{
             transform: `scale(${zoom}) rotate(${rotation}deg)`,
             transition: 'transform 0.2s ease',
-            maxHeight: '280px',
+            maxHeight: '200px',
             maxWidth: '100%',
             objectFit: 'contain',
           }}
         />
+        {children}
       </div>
-
-      {/* نسبة الثقة والمناطق - تظهر فقط بعد التحليل */}
-      {result && (
-        <div className="grid grid-cols-2 border-t border-white/10">
-          <div className="px-5 py-3 border-l border-white/10">
-            <div className="text-xs text-gray-400 mb-1 text-right">نسبة الثقة</div>
-            <div className="text-lg font-bold text-white text-right">{result.confidence}%</div>
-          </div>
-          <div className="px-5 py-3">
-            <div className="text-xs text-gray-400 mb-1 text-right">المناطق المكتشفة</div>
-            <div className="text-lg font-bold text-white text-right">{result.regions_detected} منطقة مكتشفة</div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
 
-// ========== MAIN COMPONENT ==========
 export default function NewAnalysis() {
   const fileInputRef = useRef(null)
 
+  const navigate = useNavigate()
   const [stage, setStage]             = useState('upload')
   const [isDragging, setIsDragging]   = useState(false)
   const [mobileOpen, setMobileOpen]   = useState(false)
-  const [doctorNotes, setDoctorNotes] = useState('')
-  const [feedback, setFeedback]       = useState(null)
   const [saving, setSaving]           = useState(false)
   const [saved, setSaved]             = useState(false)
   const [analyzing, setAnalyzing]     = useState(false)
@@ -176,8 +142,9 @@ export default function NewAnalysis() {
 
   const [zoom, setZoom]         = useState(1)
   const [rotation, setRotation] = useState(0)
+  const [zoom2, setZoom2]       = useState(1)
+  const [rotation2, setRotation2] = useState(0)
 
-  // ========== HANDLERS ==========
   const handleFile = (file) => {
     if (!file || !file.type.startsWith('image/')) return
     setImageFile(file)
@@ -200,16 +167,20 @@ export default function NewAnalysis() {
   const handleRotate  = () => setRotation(r => r + 90)
   const handleReset   = () => { setZoom(1); setRotation(0) }
 
+  const handleZoomIn2  = () => setZoom2(z => Math.min(z + 0.2, 3))
+  const handleZoomOut2 = () => setZoom2(z => Math.max(z - 0.2, 0.5))
+  const handleRotate2  = () => setRotation2(r => r + 90)
+  const handleReset2   = () => { setZoom2(1); setRotation2(0) }
+
   const handleBack = () => {
     setStage('upload')
     setImageFile(null)
     setImagePreview(null)
     setZoom(1); setRotation(0)
+    setZoom2(1); setRotation2(0)
     setResult(null); setSaved(false)
-    setFeedback(null); setDoctorNotes('')
   }
 
-  // ========== API: تحليل الصورة ==========
   const handleAnalyze = async () => {
     if (!imageFile || !patientName) return
     setAnalyzing(true)
@@ -221,24 +192,18 @@ export default function NewAnalysis() {
     formData.append('patient_id', patientId)
 
     try {
-      // TODO: استبدلي الـ URL بعنوان Laravel الحقيقي
       // const response = await fetch('http://localhost:8000/api/analyze', {
       //   method: 'POST',
       //   body: formData,
       // })
       // const data = await response.json()
 
-      // بيانات وهمية مؤقتة لحين ربط الباك إيند
       await new Promise(r => setTimeout(r, 1500))
       const data = {
         classification: 'Severe',
-        confidence: 99,
+        confidence: 80,
         regions_detected: 12,
-        biomarkers: {
-          microaneurysms: 'مرتفع [x72]',
-          hemorrhages: 'نزيف الدم',
-          severity: 'متوسطة',
-        },
+        segmented_image: imagePreview,
         date: new Date().toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' }),
       }
 
@@ -251,13 +216,10 @@ export default function NewAnalysis() {
     }
   }
 
-  // ========== API: حفظ التقرير ==========
   const handleSave = async () => {
     if (!result) return
     setSaving(true)
-
     try {
-      // TODO: استبدلي الـ URL بعنوان Laravel الحقيقي
       // await fetch('http://localhost:8000/api/reports/save', {
       //   method: 'POST',
       //   headers: { 'Content-Type': 'application/json' },
@@ -268,11 +230,8 @@ export default function NewAnalysis() {
       //     classification: result.classification,
       //     confidence: result.confidence,
       //     regions_detected: result.regions_detected,
-      //     doctor_notes: doctorNotes,
-      //     feedback: feedback,
       //   }),
       // })
-
       await new Promise(r => setTimeout(r, 1000))
       setSaved(true)
     } catch (err) {
@@ -284,18 +243,6 @@ export default function NewAnalysis() {
 
   const grade = result ? gradeStyles[result.classification] : null
 
-  const viewerProps = {
-    imagePreview,
-    zoom,
-    rotation,
-    result,
-    onZoomIn: handleZoomIn,
-    onZoomOut: handleZoomOut,
-    onRotate: handleRotate,
-    onReset: handleReset,
-  }
-
-  // ========== RENDER ==========
   return (
     <div className="min-h-screen bg-white flex flex-col font-sans" dir="rtl">
       <Navbar onMenuClick={() => setMobileOpen(true)} />
@@ -305,7 +252,6 @@ export default function NewAnalysis() {
 
         <div className="flex-1 p-5 md:p-6 min-w-0">
 
-          {/* ===== المرحلة 1: رفع الصورة ===== */}
           {stage === 'upload' && (
             <div className="max-w-2xl mx-auto">
               <h2 className="text-lg font-bold text-gray-900 text-right mb-4">تفاصيل المريض</h2>
@@ -372,14 +318,19 @@ export default function NewAnalysis() {
             </div>
           )}
 
-          {/* ===== المرحلة 2: معاينة الصورة ===== */}
           {stage === 'preview' && (
             <div className="max-w-2xl mx-auto">
               <div className="text-right mb-4">
                 <span className="text-base font-bold text-gray-900">المريض : {patientName || 'غير محدد'}</span>
               </div>
 
-              <ImageViewer {...viewerProps} />
+              <ImageViewer
+                imagePreview={imagePreview}
+                zoom={zoom} rotation={rotation}
+                label="معاينة صورة الشبكية (Fundus)"
+                onZoomIn={handleZoomIn} onZoomOut={handleZoomOut}
+                onRotate={handleRotate} onReset={handleReset}
+              />
 
               <div className="flex items-center justify-between gap-3 mt-4">
                 <button
@@ -400,12 +351,10 @@ export default function NewAnalysis() {
             </div>
           )}
 
-          {/* ===== المرحلة 3: نتيجة التحليل ===== */}
           {stage === 'result' && result && (
-            <div className="max-w-3xl mx-auto">
+            <div className="max-w-4xl mx-auto">
 
-              {/* Header */}
-              <div className="flex items-start justify-between mb-5 flex-wrap gap-3">
+              <div className="flex items-start justify-between mb-4 flex-wrap gap-3">
                 <div className="flex items-center gap-2">
                   {saved ? (
                     <span className="text-green-600 text-sm font-semibold bg-green-50 px-4 py-2 rounded-xl">✓ تم الحفظ</span>
@@ -416,16 +365,16 @@ export default function NewAnalysis() {
                       className="flex items-center gap-2 bg-amber-500 hover:bg-amber-600 disabled:opacity-60 text-white text-sm font-semibold px-4 py-2 rounded-xl border-0 cursor-pointer transition-colors font-sans"
                     >
                       <SaveIcon />
-                      {saving ? 'جاري الحفظ...' : 'حفظ التقرير'}
+                      {saving ? 'جاري الحفظ...' : 'حفظ النتائج'}
                     </button>
                   )}
                   <button
-                    onClick={() => window.print()}
-                    className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-600 text-sm font-semibold px-4 py-2 rounded-xl border-0 cursor-pointer transition-colors font-sans"
-                  >
-                    <PrintIcon />
-                    طباعة التقرير
-                  </button>
+  onClick={() => navigate('/report')}
+  className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-600 text-sm font-semibold px-4 py-2 rounded-xl border-0 cursor-pointer transition-colors font-sans"
+>
+  <PrintIcon />
+  عرض التقرير
+</button>
                 </div>
                 <div className="text-right">
                   <h1 className="text-xl font-bold text-gray-900">نتائج تحليل شبكية العين</h1>
@@ -433,87 +382,49 @@ export default function NewAnalysis() {
                 </div>
               </div>
 
-              {/* محتوى النتيجة */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-
-                {/* العمود الأيمن: الصورة */}
-                <div>
-                  <ImageViewer {...viewerProps} />
+              <div className="flex items-center justify-end gap-3 mb-4">
+                <div className="flex items-center gap-2">
+                  <EyeIcon size={15} color="#f59e0b" />
+                  <span className="text-sm font-semibold text-gray-700">التشخيص</span>
                 </div>
+                <span className={`text-sm font-semibold px-3 py-1 rounded-full ${grade.bg} ${grade.text}`}>
+                  ● {grade.label}
+                </span>
+              </div>
 
-                {/* العمود الأيسر: التفاصيل */}
-                <div className="flex flex-col gap-4">
-
-                  {/* التصنيف */}
-                  <div className="border border-gray-100 rounded-2xl p-4">
-                    <div className="flex items-center gap-2 mb-3 justify-end">
-                      <span className="text-sm font-semibold text-gray-700">التشخيص</span>
-                      <EyeIcon size={16} color="#f59e0b" />
-                    </div>
-                    <div className="flex justify-end">
-                      <span className={`text-sm font-semibold px-4 py-1.5 rounded-full ${grade.bg} ${grade.text}`}>
-                        ● {grade.label}
-                      </span>
-                    </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <ImageViewer
+                  imagePreview={result.segmented_image}
+                  zoom={zoom2} rotation={rotation2}
+                  label="صورة الشبكية المقسمة (segmented)"
+                  onZoomIn={handleZoomIn2} onZoomOut={handleZoomOut2}
+                  onRotate={handleRotate2} onReset={handleReset2}
+                >
+                  <div className="absolute bottom-2 right-2">
+                    <button className="bg-amber-500 text-white text-xs px-3 py-1.5 rounded-lg border-0 cursor-pointer font-sans">
+                    عرض الخريطة الحرارية
+                    </button>
                   </div>
+                </ImageViewer>
 
-                  {/* المؤشرات الحيوية */}
-                  <div className="border border-gray-100 rounded-2xl p-4">
-                    <h3 className="text-sm font-semibold text-gray-700 text-right mb-3">المؤشرات الحيوية</h3>
-                    <div className="flex flex-col gap-2.5">
-                      {[
-                        { label: 'الأوعية الدقيقة', value: result.biomarkers.microaneurysms, valueColor: 'text-red-500' },
-                        { label: 'النزيف الدموي',   value: result.biomarkers.hemorrhages,    valueColor: 'text-red-400' },
-                        { label: 'درجة الوذمة',     value: result.biomarkers.severity,       valueColor: 'text-gray-600' },
-                      ].map((item) => (
-                        <div key={item.label} className="flex items-center justify-between">
-                          <span className={`text-sm font-medium ${item.valueColor}`}>{item.value}</span>
-                          <span className="text-xs text-gray-400">{item.label}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+                <ImageViewer
+                  imagePreview={imagePreview}
+                  zoom={zoom} rotation={rotation}
+                  label="معاينة صورة الشبكية (Fundus)"
+                  onZoomIn={handleZoomIn} onZoomOut={handleZoomOut}
+                  onRotate={handleRotate} onReset={handleReset}
+                />
+              </div>
 
-                  {/* ملاحظات الطبيب */}
-                  <div className="border border-gray-100 rounded-2xl p-4">
-                    <h3 className="text-sm font-semibold text-gray-700 text-right mb-3">ملاحظات الطبيب المختص</h3>
-                    <textarea
-                      placeholder="أدخل توصياتك الطبية هنا..."
-                      value={doctorNotes}
-                      onChange={e => setDoctorNotes(e.target.value)}
-                      rows={3}
-                      className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-right outline-none focus:border-amber-400 transition-colors resize-none"
-                    />
-                  </div>
-
-                  {/* تقييم الذكاء الاصطناعي */}
-                  <div className="border border-gray-100 rounded-2xl p-4">
-                    <h3 className="text-sm font-semibold text-gray-700 text-right mb-3">تقييم الذكاء الاصطناعي</h3>
-                    <div className="flex gap-3 justify-end">
-                      <button
-                        onClick={() => setFeedback('inaccurate')}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm border-0 cursor-pointer transition-colors font-sans ${
-                          feedback === 'inaccurate' ? 'bg-red-100 text-red-600 font-semibold' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                        }`}
-                      >
-                        <ThumbDownIcon /> غير دقيق
-                      </button>
-                      <button
-                        onClick={() => setFeedback('accurate')}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm border-0 cursor-pointer transition-colors font-sans ${
-                          feedback === 'accurate' ? 'bg-green-100 text-green-600 font-semibold' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                        }`}
-                      >
-                        <ThumbUpIcon /> دقيق
-                      </button>
-                    </div>
-                  </div>
-
+              <div className="grid grid-cols-2 border border-gray-100 rounded-2xl overflow-hidden">
+                
+                <div className="px-5 py-4">
+                  <div className="text-xs text-gray-400 mb-1 text-right">نسبة الثقة</div>
+                  <div className="text-lg font-bold text-gray-900 text-right">{result.confidence}%</div>
                 </div>
               </div>
 
-              {/* زر رجوع */}
-              <div className="mt-5 flex justify-start">
+              <div className="mt-4 flex justify-start">
                 <button
                   onClick={handleBack}
                   className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-600 text-sm font-semibold px-5 py-2.5 rounded-xl border-0 cursor-pointer transition-colors font-sans"
