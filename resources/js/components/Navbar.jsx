@@ -1,4 +1,5 @@
 import { useNavigate, useLocation } from 'react-router-dom'
+import logo from '../assets/logo.jpg'
 
 
 const SettingsIcon = ({ size = 18 }) => (
@@ -15,12 +16,8 @@ const BellIcon = ({ size = 18 }) => (
   </svg>
 )
 
-const EyeIcon = ({ size = 20, color = "currentColor" }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-    <circle cx="12" cy="12" r="3"/>
-  </svg>
-)
+
+
 
 const MenuIcon = ({ size = 22 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -73,9 +70,7 @@ export default function Navbar({ onMenuClick }) {
       </div>
 
       {/* Right: eye logo */}
-      <div className="w-10 h-10 border-2 border-gray-900 rounded-full flex items-center justify-center shrink-0">
-        <EyeIcon size={20} />
-      </div>
+      <img src={logo} className="w-10 h-10 rounded-full object-cover" alt="logo" />
     </div>
   )
 }
