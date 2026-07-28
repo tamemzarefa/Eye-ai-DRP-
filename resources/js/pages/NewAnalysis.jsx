@@ -98,11 +98,35 @@ const ThumbDownIcon = ({ size = 14 }) => (
 
 // ========== درجات الخطورة ==========
 const gradeStyles = {
-  'Negative':      { label: 'طبيعي (Negative)',       bg: 'bg-green-100',  text: 'text-green-700' },
-  'Mild':          { label: 'خفيف (Mild)',             bg: 'bg-blue-100',   text: 'text-blue-700' },
-  'Moderate':      { label: 'متوسط (Moderate)',        bg: 'bg-amber-100',  text: 'text-amber-700' },
-  'Severe':        { label: 'اعتلال شديد (Grade 4)',   bg: 'bg-orange-100', text: 'text-orange-700' },
-  'Proliferative': { label: 'تكاثري (Proliferative)', bg: 'bg-red-100',    text: 'text-red-700' },
+    'No DR': {
+        label: 'طبيعي',
+        bg: 'bg-green-100',
+        text: 'text-green-700'
+    },
+
+    'Mild NPDR': {
+        label: 'اعتلال خفيف',
+        bg: 'bg-blue-100',
+        text: 'text-blue-700'
+    },
+
+    'Moderate NPDR': {
+        label: 'اعتلال متوسط',
+        bg: 'bg-amber-100',
+        text: 'text-amber-700'
+    },
+
+    'Severe NPDR': {
+        label: 'اعتلال شديد',
+        bg: 'bg-orange-100',
+        text: 'text-orange-700'
+    },
+
+    'Proliferative DR': {
+        label: 'اعتلال تكاثري',
+        bg: 'bg-red-100',
+        text: 'text-red-700'
+    }
 }
 
 // ========== IMAGE VIEWER ==========
@@ -204,101 +228,123 @@ export default function NewAnalysis() {
     setFeedback(null); setDoctorNotes('')
   }
 
-  const handleAnalyze = async () => {
-    if (!imageFile || !patientName) return
-    setAnalyzing(true)
+ const handleAnalyze = async () => {
+  if (!imageFile || !patientName) return
+  setAnalyzing(true)
 
-    const formData = new FormData()
-    formData.append('eye_image', imageFile)
-    formData.append('patient_name', patientName)
-    formData.append('patient_age', patientAge)
-    formData.append('patient_id', patientId)
+  const formData = new FormData()
+  formData.append('eye_image', imageFile)
+  formData.append('patient_name', patientName)
+  formData.append('patient_age', patientAge)
+  formData.append('patient_id', patientId)
 
-    try {
-      const res = await authFetch('/api/v1/medical-imaging/analyze', {
-        method: 'POST',
-        body: formData,
-      })
+  try {
+    const res = await authFetch('/api/v1/medical-imaging/analyze', {
+      method: 'POST',
+      body: formData,
+    })
 
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => null)
-        console.error('خطأ بالتحليل:', errorData)
-        return
-      }
-
-      const json = await res.json()
-      const data = {
-        classification: json.data.prediction || 'Unknown',
-        confidence: json.data.confidence ?? 0,
-        class_index: json.data.class_index ?? null,
-        date: new Date().toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' }),
-      }
-
-      setResult(data)
-      setStage('result')
-      navigate('/report/preview', { state: { report: {
-        patient_name: patientName,
-        patient_age: patientAge,
-        patient_id: patientId,
-        classification: data.classification,
-        confidence: data.confidence,
-        doctor_notes: doctorNotes,
-        feedback: feedback,
-        image_preview: imagePreview,
-        date: data.date,
-      } } })
-    } catch (err) {
-      console.error('خطأ بالتحليل:', err)
-    } finally {
-      setAnalyzing(false)
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => null)
+      console.error('خطأ بالتحليل:', errorData)
+      return
     }
+
+    const json = await res.json()
+    const prediction = json.data?.prediction || {}
+
+    const data = {
+  classification: prediction.grade || 'Unknown',
+  confidence: prediction.confidence ?? 0,
+  class_index: prediction.stage ?? null,
+  heatmap: json.data?.heatmap_url || null,
+  segmentation: json.data?.segmentation || null,  
+  report: json.data?.report || '',
+  date: new Date().toLocaleDateString('ar-EG', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  }),
+}
+
+    setResult(data)
+    setStage('result')
+
+  } catch (err) {
+    console.error('خطأ بالتحليل:', err)
+  } finally {
+    setAnalyzing(false)
   }
+}
 
-  const handleSave = async () => {
-    if (!result) return
-    setSaving(true)
+const handleSave = async () => {
+  if (!result) return
+  setSaving(true)
 
-    try {
-      // send report to API and expect { id }
-      const payload = {
-        patient_name: patientName,
-        patient_age: patientAge,
-        patient_id: patientId,
-        classification: result.classification,
-        confidence: result.confidence,
-        doctor_notes: doctorNotes,
-        feedback: feedback,
-        image_preview: imagePreview,
-        date: result.date,
-      }
+  try {
+    const payload = {
+      patient_name: patientName,
+      patient_age: patientAge,
+      patient_id: patientId,
 
-      // use authFetch so token is attached when available
-      const res = await authFetch('/api/v1/reports', {
-        method: 'POST',
-        body: JSON.stringify(payload),
-        headers: { 'Content-Type': 'application/json' },
-      })
+      classification: result.classification,
+      segmentation: result.segmentation,   
+      confidence: result.confidence,
+      class_index: result.class_index,
 
-      if (res.ok) {
-        const data = await res.json()
-        setSaved(true)
-        const reportId = data.id || 'preview'
-        navigate(`/report/${reportId}`)
-      } else {
-        // fallback: mark saved and navigate to preview id
-        setSaved(true)
-        navigate('/report/preview')
-      }
-    } catch (err) {
-      console.error('خطأ بالحفظ:', err)
-      // fallback to preview
+      heatmap: result.heatmap,
+      ai_report: result.report,
+
+      doctor_notes: doctorNotes,
+      feedback: feedback,
+      image_preview: imagePreview,
+      date: result.date,
+    }
+
+    const res = await authFetch('/api/v1/reports', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+
+    if (res.ok) {
+      const response = await res.json()
       setSaved(true)
-      navigate('/report/preview')
-    } finally {
-      setSaving(false)
-    }
-  }
 
+      const reportId = response.id || 'preview'
+
+      navigate(`/report/${reportId}`, {
+        state: {
+          report: payload,
+        },
+      })
+    } else {
+      setSaved(true)
+
+      navigate('/report/preview', {
+        state: {
+          report: payload,
+        },
+      })
+    }
+
+  } catch (err) {
+    console.error('خطأ بالحفظ:', err)
+
+    setSaved(true)
+
+    navigate('/report/preview', {
+      state: {
+        report: payload,
+      },
+    })
+
+  } finally {
+    setSaving(false)
+  }
+}
   const navigate = useNavigate()
 
   const grade = result ? gradeStyles[result.classification] : null
@@ -481,17 +527,70 @@ export default function NewAnalysis() {
                   </div>
 
                   {/* ملاحظات الطبيب */}
-                  <div className="border border-gray-100 rounded-2xl p-4">
-                    <h3 className="text-sm font-semibold text-gray-700 text-right mb-3">ملاحظات الطبيب المختص</h3>
-                    <textarea
-                      placeholder="أدخل توصياتك الطبية هنا..."
-                      value={doctorNotes}
-                      onChange={e => setDoctorNotes(e.target.value)}
-                      rows={3}
-                      className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-right outline-none focus:border-amber-400 transition-colors resize-none"
-                    />
-                  </div>
+                 {result.report && (
+    <div className="border border-gray-100 rounded-2xl p-4">
+        <h3 className="text-right font-semibold mb-3">
+            التقرير الطبي
+        </h3>
 
+        <div className="text-sm whitespace-pre-line text-gray-700">
+            {result.report}
+        </div>
+    </div>
+)}
+{/* Grad-CAM */}
+{result.heatmap && (
+    <div className="border border-gray-100 rounded-2xl p-4">
+        <h3 className="text-right font-semibold mb-3">
+            Grad-CAM Heatmap
+        </h3>
+
+        <img
+            src={result.heatmap}
+            alt="Heatmap"
+            className="rounded-xl w-full"
+        />
+    </div>
+)}
+
+{/* Segmentation Overlay + Masks */}
+{result.segmentation && (
+    <div className="border border-gray-100 rounded-2xl p-4">
+        <h3 className="text-right font-semibold mb-3">
+            تحليل الآفات (Segmentation)
+        </h3>
+
+        {result.segmentation.overlay_url && (
+            <img
+                src={result.segmentation.overlay_url}
+                alt="Segmentation Overlay"
+                className="rounded-xl w-full mb-4"
+            />
+        )}
+
+        {result.segmentation.mask_urls && (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {Object.entries(result.segmentation.mask_urls).map(([className, url]) => (
+                    <div key={className} className="text-center">
+                        <img
+                            src={url}
+                            alt={className}
+                            className="rounded-lg w-full border border-gray-100"
+                        />
+                        <span className="text-xs text-gray-500 mt-1 block">
+                            {className}
+                            {result.segmentation.positive_pixels?.[className] !== undefined && (
+                                <span className="text-gray-400">
+                                    {' '}({result.segmentation.positive_pixels[className]} px)
+                                </span>
+                            )}
+                        </span>
+                    </div>
+                ))}
+            </div>
+        )}
+    </div>
+)}
                   {/* تقييم الذكاء الاصطناعي */}
                   <div className="border border-gray-100 rounded-2xl p-4">
                     <h3 className="text-sm font-semibold text-gray-700 text-right mb-3">تقييم الذكاء الاصطناعي</h3>
