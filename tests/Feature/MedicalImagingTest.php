@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\Models\User;
 use Illuminate\Http\Response;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
@@ -17,6 +18,15 @@ use Tests\TestCase;
  */
 class MedicalImagingTest extends TestCase
 {
+    private User $user;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->user = User::factory()->create();
+    }
+
     // ─── Test Cases ───────────────────────────────────────────────
 
     /**
@@ -39,9 +49,10 @@ class MedicalImagingTest extends TestCase
         $fakeImage = UploadedFile::fake()->image('eye_scan.jpg', 600, 600);
 
         // 3. Make POST request to our Laravel API route
-        $response = $this->postJson(route('medical-imaging.analyze'), [
-            'eye_image' => $fakeImage,
-        ]);
+        $response = $this->actingAs($this->user, 'sanctum')
+            ->postJson(route('medical-imaging.analyze'), [
+                'eye_image' => $fakeImage,
+            ]);
 
         // 4. Assert HTTP status code is 200 OK
         $response->assertStatus(Response::HTTP_OK);
@@ -70,7 +81,8 @@ class MedicalImagingTest extends TestCase
     public function test_fails_validation_when_image_is_missing(): void
     {
         // Make POST request with an empty payload
-        $response = $this->postJson(route('medical-imaging.analyze'), []);
+        $response = $this->actingAs($this->user, 'sanctum')
+            ->postJson(route('medical-imaging.analyze'), []);
 
         // Assert 422 Unprocessable Entity
         $response->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY);
@@ -87,9 +99,10 @@ class MedicalImagingTest extends TestCase
         // Create a fake text file instead of an image
         $fakeTxtFile = UploadedFile::fake()->create('document.txt', 100);
 
-        $response = $this->postJson(route('medical-imaging.analyze'), [
-            'eye_image' => $fakeTxtFile,
-        ]);
+        $response = $this->actingAs($this->user, 'sanctum')
+            ->postJson(route('medical-imaging.analyze'), [
+                'eye_image' => $fakeTxtFile,
+            ]);
 
         $response->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY);
         $response->assertJsonValidationErrors(['eye_image']);
@@ -103,9 +116,10 @@ class MedicalImagingTest extends TestCase
         // Create a fake image that exceeds 10 MB (e.g. 11 MB = 11,264 KB)
         $largeImage = UploadedFile::fake()->create('large_scan.jpg', 11264, 'image/jpeg');
 
-        $response = $this->postJson(route('medical-imaging.analyze'), [
-            'eye_image' => $largeImage,
-        ]);
+        $response = $this->actingAs($this->user, 'sanctum')
+            ->postJson(route('medical-imaging.analyze'), [
+                'eye_image' => $largeImage,
+            ]);
 
         $response->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY);
         $response->assertJsonValidationErrors(['eye_image']);
@@ -123,14 +137,41 @@ class MedicalImagingTest extends TestCase
 
         $fakeImage = UploadedFile::fake()->image('eye_scan.jpg');
 
-        $response = $this->postJson(route('medical-imaging.analyze'), [
-            'eye_image' => $fakeImage,
-        ]);
+        $response = $this->actingAs($this->user, 'sanctum')
+            ->postJson(route('medical-imaging.analyze'), [
+                'eye_image' => $fakeImage,
+            ]);
 
         // 2. Assert HTTP status code is 503 Service Unavailable
         $response->assertStatus(Response::HTTP_SERVICE_UNAVAILABLE);
 
         // 3. Verify user-friendly message payload
+        $response->assertJson([
+            'success' => false,
+            'message' => 'The medical imaging service is currently unavailable. Please try again later.',
+        ]);
+    }
+
+    /**
+     * Test service failure handling when FastAPI returns an invalid payload.
+     */
+    public function test_returns_service_unavailable_status_on_invalid_fastapi_payload(): void
+    {
+        Http::fake([
+            '*/predict' => Http::response([
+                'prediction' => 'No Diabetic Retinopathy',
+                // confidence intentionally omitted
+            ], Response::HTTP_OK),
+        ]);
+
+        $fakeImage = UploadedFile::fake()->image('eye_scan.jpg');
+
+        $response = $this->actingAs($this->user, 'sanctum')
+            ->postJson(route('medical-imaging.analyze'), [
+                'eye_image' => $fakeImage,
+            ]);
+
+        $response->assertStatus(Response::HTTP_SERVICE_UNAVAILABLE);
         $response->assertJson([
             'success' => false,
             'message' => 'The medical imaging service is currently unavailable. Please try again later.',

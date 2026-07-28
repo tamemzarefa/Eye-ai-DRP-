@@ -159,8 +159,26 @@ class FastApiService
             'http_status' => $response->status(),
         ]);
 
-        /** @var array{prediction: string, confidence: float} */
-        return $response->json();
+        /** @var array<string, mixed>|null $payload */
+        $payload = $response->json();
+
+        if (! is_array($payload)
+            || ! array_key_exists('prediction', $payload)
+            || ! array_key_exists('confidence', $payload)
+        ) {
+            Log::error('FastApiService: Invalid /predict response payload.', [
+                'status' => $response->status(),
+                'body'   => $response->body(),
+                'json'   => $payload,
+            ]);
+
+            throw new \RuntimeException('FastAPI /predict returned an invalid payload.');
+        }
+
+        return [
+            'prediction' => (string) $payload['prediction'],
+            'confidence' => (float) $payload['confidence'],
+        ];
     }
 
     // ─── Internal Helpers ─────────────────────────────────────────

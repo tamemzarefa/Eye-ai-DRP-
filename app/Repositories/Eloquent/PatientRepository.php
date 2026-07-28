@@ -27,6 +27,7 @@ class PatientRepository implements PatientRepositoryInterface
     {
         return $this->model
             ->newQuery()
+            ->with('media')
             ->latest()
             ->paginate($perPage);
     }
@@ -37,6 +38,7 @@ class PatientRepository implements PatientRepositoryInterface
         /** @var Patient */
         return $this->model
             ->newQuery()
+            ->with('media')
             ->findOrFail($id);
     }
 

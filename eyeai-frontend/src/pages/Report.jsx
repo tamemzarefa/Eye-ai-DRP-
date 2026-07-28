@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useLocation, useParams } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import Sidebar from '../components/Sidebar'
 
@@ -75,6 +76,8 @@ const chatSuggestions = [
 ]
 
 export default function Report() {
+  const { id } = useParams()
+  const location = useLocation()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [chatOpen, setChatOpen] = useState(false)
   const [messages, setMessages] = useState([])
@@ -156,10 +159,27 @@ export default function Report() {
             {/* محتوى التقرير */}
             <div className="flex-1 p-4 overflow-auto">
               <div
-                className="bg-white border border-gray-100 rounded-xl shadow-sm mx-auto transition-all"
+                className="bg-white border border-gray-100 rounded-xl shadow-sm mx-auto transition-all p-6"
                 style={{ width: `${zoom}%`, minHeight: '500px' }}
               >
-                {/* TODO: هون رح يتحمل الـ PDF من Laravel */}
+                {location.state?.report ? (
+                  <div className="space-y-4 text-right">
+                    <div className="text-sm text-gray-500">المريض</div>
+                    <div className="text-lg font-bold">{location.state.report.patient_name}</div>
+                    <div className="text-xs text-gray-400">
+                      ID: {location.state.report.patient_id} • العمر: {location.state.report.patient_age}
+                    </div>
+                    <div className="text-sm text-gray-700 mt-3">التصنيف: {location.state.report.classification}</div>
+                    <div className="text-sm text-gray-700">نسبة الثقة: {location.state.report.confidence}%</div>
+                    <div className="text-sm text-gray-700">التاريخ: {location.state.report.date}</div>
+                  </div>
+                ) : (
+                  <div className="text-center text-gray-500">
+                    {id === 'preview'
+                      ? 'التقرير للمعاينة فقط. هذا المكان سيعرض بيانات التقرير المحفوظ بعد الحفظ.'
+                      : `تم فتح تقرير برقم الهوية ${id}. هنا ستظهر بيانات التقرير بعد الربط مع الباكند.`}
+                  </div>
+                )}
               </div>
             </div>
           </div>

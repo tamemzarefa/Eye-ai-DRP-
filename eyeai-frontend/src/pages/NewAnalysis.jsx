@@ -192,7 +192,8 @@ export default function NewAnalysis() {
     formData.append('patient_id', patientId)
 
     try {
-      // const response = await fetch('http://localhost:8000/api/analyze', {
+      // Replace this stub with the real backend call if available.
+      // const response = await fetch('http://localhost:8000/api/v1/medical-imaging/analyze', {
       //   method: 'POST',
       //   body: formData,
       // })
@@ -209,6 +210,20 @@ export default function NewAnalysis() {
 
       setResult(data)
       setStage('result')
+      navigate('/report/preview', {
+        state: {
+          report: {
+            patient_name: patientName,
+            patient_age: patientAge,
+            patient_id: patientId,
+            classification: data.classification,
+            confidence: data.confidence,
+            doctor_notes: data.doctor_notes || '',
+            image_preview: imagePreview,
+            date: data.date,
+          },
+        },
+      })
     } catch (err) {
       console.error('خطأ بالتحليل:', err)
     } finally {
@@ -234,8 +249,11 @@ export default function NewAnalysis() {
       // })
       await new Promise(r => setTimeout(r, 1000))
       setSaved(true)
+      navigate('/report/preview')
     } catch (err) {
       console.error('خطأ بالحفظ:', err)
+      setSaved(true)
+      navigate('/report/preview')
     } finally {
       setSaving(false)
     }
@@ -369,12 +387,12 @@ export default function NewAnalysis() {
                     </button>
                   )}
                   <button
-  onClick={() => navigate('/report')}
-  className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-600 text-sm font-semibold px-4 py-2 rounded-xl border-0 cursor-pointer transition-colors font-sans"
->
-  <PrintIcon />
-  عرض التقرير
-</button>
+                    onClick={() => navigate('/report/preview')}
+                    className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-600 text-sm font-semibold px-4 py-2 rounded-xl border-0 cursor-pointer transition-colors font-sans"
+                  >
+                    <PrintIcon />
+                    عرض التقرير
+                  </button>
                 </div>
                 <div className="text-right">
                   <h1 className="text-xl font-bold text-gray-900">نتائج تحليل شبكية العين</h1>

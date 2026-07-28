@@ -1,4 +1,6 @@
 import { useState, useRef, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { authFetch } from '../lib/auth'
 import Navbar from '../components/Navbar'
 import Sidebar from '../components/Sidebar'
 
@@ -207,28 +209,44 @@ export default function NewAnalysis() {
     setAnalyzing(true)
 
     const formData = new FormData()
-    formData.append('image', imageFile)
+    formData.append('eye_image', imageFile)
     formData.append('patient_name', patientName)
     formData.append('patient_age', patientAge)
     formData.append('patient_id', patientId)
 
     try {
-      // TODO: استبدلي الـ URL بعنوان Laravel الحقيقي
-      // const response = await fetch('http://localhost:8000/api/analyze', {
-      //   method: 'POST',
-      //   body: formData,
-      // })
-      // const data = await response.json()
+      const res = await authFetch('/api/v1/medical-imaging/analyze', {
+        method: 'POST',
+        body: formData,
+      })
 
-      await new Promise(r => setTimeout(r, 1500))
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => null)
+        console.error('خطأ بالتحليل:', errorData)
+        return
+      }
+
+      const json = await res.json()
       const data = {
-        classification: 'Severe',
-        confidence: 99,
+        classification: json.data.prediction || 'Unknown',
+        confidence: json.data.confidence ?? 0,
+        class_index: json.data.class_index ?? null,
         date: new Date().toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' }),
       }
 
       setResult(data)
       setStage('result')
+      navigate('/report/preview', { state: { report: {
+        patient_name: patientName,
+        patient_age: patientAge,
+        patient_id: patientId,
+        classification: data.classification,
+        confidence: data.confidence,
+        doctor_notes: doctorNotes,
+        feedback: feedback,
+        image_preview: imagePreview,
+        date: data.date,
+      } } })
     } catch (err) {
       console.error('خطأ بالتحليل:', err)
     } finally {
@@ -241,29 +259,47 @@ export default function NewAnalysis() {
     setSaving(true)
 
     try {
-      // TODO: استبدلي الـ URL بعنوان Laravel الحقيقي
-      // await fetch('http://localhost:8000/api/reports/save', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({
-      //     patient_name: patientName,
-      //     patient_age: patientAge,
-      //     patient_id: patientId,
-      //     classification: result.classification,
-      //     confidence: result.confidence,
-      //     doctor_notes: doctorNotes,
-      //     feedback: feedback,
-      //   }),
-      // })
+      // send report to API and expect { id }
+      const payload = {
+        patient_name: patientName,
+        patient_age: patientAge,
+        patient_id: patientId,
+        classification: result.classification,
+        confidence: result.confidence,
+        doctor_notes: doctorNotes,
+        feedback: feedback,
+        image_preview: imagePreview,
+        date: result.date,
+      }
 
-      await new Promise(r => setTimeout(r, 1000))
-      setSaved(true)
+      // use authFetch so token is attached when available
+      const res = await authFetch('/api/v1/reports', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+        headers: { 'Content-Type': 'application/json' },
+      })
+
+      if (res.ok) {
+        const data = await res.json()
+        setSaved(true)
+        const reportId = data.id || 'preview'
+        navigate(`/report/${reportId}`)
+      } else {
+        // fallback: mark saved and navigate to preview id
+        setSaved(true)
+        navigate('/report/preview')
+      }
     } catch (err) {
       console.error('خطأ بالحفظ:', err)
+      // fallback to preview
+      setSaved(true)
+      navigate('/report/preview')
     } finally {
       setSaving(false)
     }
   }
+
+  const navigate = useNavigate()
 
   const grade = result ? gradeStyles[result.classification] : null
 
@@ -386,8 +422,16 @@ export default function NewAnalysis() {
               {/* Header */}
               <div className="flex items-start justify-between mb-5 flex-wrap gap-3">
                 <div className="flex items-center gap-2">
-                  {saved ? (
-                    <span className="text-green-600 text-sm font-semibold bg-green-50 px-4 py-2 rounded-xl">✓ تم الحفظ</span>
+                      {saved ? (
+                    <>
+                      <span className="text-green-600 text-sm font-semibold bg-green-50 px-4 py-2 rounded-xl">✓ تم الحفظ</span>
+                      <button
+                        onClick={() => navigate('/report/preview')}
+                        className="flex items-center gap-2 bg-amber-100 hover:bg-amber-200 text-amber-700 text-sm font-semibold px-4 py-2 rounded-xl border-0 cursor-pointer transition-colors font-sans"
+                      >
+                        عرض التقرير
+                      </button>
+                    </>
                   ) : (
                     <button
                       onClick={handleSave}

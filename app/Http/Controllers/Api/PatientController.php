@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\StorePatientRequest;
 use App\Http\Requests\UpdatePatientRequest;
 use App\Http\Resources\PatientResource;
+use App\Models\Patient;
 use App\Services\PatientService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -23,7 +24,9 @@ class PatientController extends Controller
 {
     public function __construct(
         protected readonly PatientService $patientService,
-    ) {}
+    ) {
+        $this->authorizeResource(Patient::class, 'patient');
+    }
 
     // ─── GET /api/patients ────────────────────────────────────────
 
@@ -120,6 +123,8 @@ class PatientController extends Controller
     public function diagnose(int $patient): JsonResponse
     {
         $model  = $this->patientService->getPatient($patient);
+        $this->authorize('diagnose', $model);
+
         $result = $this->patientService->runAiDiagnostic($model);
 
         if ($result === null) {

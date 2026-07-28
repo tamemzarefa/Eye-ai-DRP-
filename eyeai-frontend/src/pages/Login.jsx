@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { post, setToken } from '../lib/api'
 import logo from '../assets/logo.png'
 
 export default function Login() {
@@ -7,6 +8,7 @@ export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
   const handleLogin = async (e) => {
     e.preventDefault()
@@ -14,18 +16,13 @@ export default function Login() {
     setLoading(true)
 
     try {
-      // const response = await fetch('http://localhost:8000/api/login', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ email, password }),
-      // })
-      // const data = await response.json()
-      // localStorage.setItem('token', data.token)
-
-      await new Promise(r => setTimeout(r, 1000))
+      setError('')
+      const data = await post('/auth/login', { email, password })
+      setToken(data.token)
       navigate('/')
     } catch (err) {
       console.error('خطأ بتسجيل الدخول:', err)
+      setError(err.message || 'فشل تسجيل الدخول. تحقق من البيانات وحاول مرة أخرى.')
     } finally {
       setLoading(false)
     }
@@ -59,6 +56,11 @@ export default function Login() {
           <h1 className="text-2xl font-bold text-gray-900 mb-6">Sign In</h1>
 
           <form onSubmit={handleLogin} className="flex flex-col gap-4">
+            {error && (
+              <div className="rounded-xl bg-red-50 border border-red-200 text-red-700 px-4 py-3 text-sm">
+                {error}
+              </div>
+            )}
             <div>
               <label className="block text-sm text-gray-600 mb-1">your email</label>
               <input

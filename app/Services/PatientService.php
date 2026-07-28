@@ -6,8 +6,11 @@ use App\Models\Patient;
 use App\Repositories\Contracts\PatientRepositoryInterface;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
+use App\Services\AiInferenceOrchestrator;
 
 /**
  * PatientService — Business logic orchestrator for the Patient module.
@@ -21,6 +24,7 @@ class PatientService
     public function __construct(
         protected readonly PatientRepositoryInterface $patientRepository,
         protected readonly FastApiService $fastApiService,
+        protected readonly AiInferenceOrchestrator $aiInferenceOrchestrator,
     ) {}
 
     // ─── Query Methods ────────────────────────────────────────────
@@ -83,12 +87,58 @@ class PatientService
 
         // 3. (Optional) Send image to FastAPI for AI analysis
         if ($runDiagnostic && $profileImage !== null) {
-            $diagnosis = $this->runAiDiagnostic($patient);
+            $diagnosis = $this->createDiagnosticExamination($patient, $profileImage);
         }
 
         return [
             'patient'   => $patient->load('media'),
             'diagnosis' => $diagnosis,
+        ];
+    }
+
+    /**
+     * Create an initial eye examination for the patient and run AI inference.
+     */
+    protected function createDiagnosticExamination(Patient $patient, UploadedFile $profileImage): ?array
+    {
+        $doctorId = Auth::id();
+
+        if ($doctorId === null) {
+            Log::warning('PatientService: Cannot create examination without authenticated doctor.');
+
+            return null;
+        }
+
+        $examination = $patient->examinations()->create([
+            'doctor_id'        => $doctorId,
+            'examination_date' => now()->toDateString(),
+            'clinical_notes'   => 'Automated diagnostic scan created during patient registration.',
+        ]);
+
+        $filename = Str::uuid()->toString() . '.' . $profileImage->getClientOriginalExtension();
+        $storagePath = $profileImage->storeAs(
+            'retinal-scans/' . now()->format('Y/m/d'),
+            $filename,
+            'private'
+        );
+
+        $retinalScan = $examination->retinalScans()->create([
+            'eye'                => 'left',
+            'original_scan_path' => $storagePath,
+            'status'             => 'pending',
+        ]);
+
+        $prediction = $this->aiInferenceOrchestrator->processScan($retinalScan);
+
+        if ($prediction === null) {
+            return null;
+        }
+
+        return [
+            'predicted_class' => $prediction->predicted_class,
+            'confidence_score'=> $prediction->confidence_score,
+            'segmentation_url'=> $prediction->segmentationUrl(),
+            'heatmap_url'     => $prediction->heatmapUrl(),
         ];
     }
 
