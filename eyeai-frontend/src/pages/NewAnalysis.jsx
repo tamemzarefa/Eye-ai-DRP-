@@ -2,6 +2,7 @@ import { useState, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import Sidebar from '../components/Sidebar'
+import { post } from '../lib/api'
 
 const UploadCloudIcon = ({ size = 36 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -186,25 +187,19 @@ export default function NewAnalysis() {
     setAnalyzing(true)
 
     const formData = new FormData()
-    formData.append('image', imageFile)
+    formData.append('eye_image', imageFile)
     formData.append('patient_name', patientName)
     formData.append('patient_age', patientAge)
     formData.append('patient_id', patientId)
 
     try {
-      // Replace this stub with the real backend call if available.
-      // const response = await fetch('http://localhost:8000/api/v1/medical-imaging/analyze', {
-      //   method: 'POST',
-      //   body: formData,
-      // })
-      // const data = await response.json()
+      const response = await post('/medical-imaging/analyze', formData)
 
-      await new Promise(r => setTimeout(r, 1500))
       const data = {
-        classification: 'Severe',
-        confidence: 80,
-        regions_detected: 12,
-        segmented_image: imagePreview,
+        classification: response.data?.prediction || 'Unknown',
+        confidence: response.data?.confidence ?? 0,
+        class_index: response.data?.class_index ?? null,
+        segmented_image: response.data?.segmented_image ?? imagePreview,
         date: new Date().toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' }),
       }
 
@@ -218,14 +213,16 @@ export default function NewAnalysis() {
             patient_id: patientId,
             classification: data.classification,
             confidence: data.confidence,
-            doctor_notes: data.doctor_notes || '',
+            doctor_notes: doctorNotes || '',
+            feedback: feedback || '',
             image_preview: imagePreview,
             date: data.date,
           },
         },
       })
     } catch (err) {
-      console.error('خطأ بالتحليل:', err)
+      const message = err?.message || err?.data?.message || 'حدث خطأ أثناء التحليل.'
+      console.error('خطأ بالتحليل:', message, err)
     } finally {
       setAnalyzing(false)
     }

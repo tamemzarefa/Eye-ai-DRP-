@@ -24,9 +24,11 @@ export default function Login() {
 
       if (!res.ok) throw new Error('Login failed')
       const data = await res.json()
-      // store token using helper
-      if (data.token) setToken(data.token)
-      navigate('/')
+      if (!data.token) {
+        throw new Error('Login response did not return a token.')
+      }
+      setToken(data.token)
+      window.location.href = '/'
     } catch (err) {
       console.error(err)
       setError(err.message || 'فشل تسجيل الدخول')

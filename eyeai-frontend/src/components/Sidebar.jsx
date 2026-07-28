@@ -111,10 +111,6 @@ function SidebarContent({ onClose }) {
           <HelpCircleIcon />
           <span className="text-sm text-gray-500">المساعدة</span>
         </div>
-        <div className="flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-red-50">
-          <LogOutIcon />
-          <span className="text-sm text-red-500">خروج</span>
-        </div>
       </div>
     </div>
   )

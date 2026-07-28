@@ -4,9 +4,6 @@ import NewAnalysis from './pages/NewAnalysis'
 import Reports from './pages/Reports'
 import Patients from './pages/Patients'
 import Report from './pages/Report'
-import Login from './pages/Login'
-import Register from './pages/Register'
-
 
 function App() {
   return (
@@ -18,8 +15,6 @@ function App() {
         <Route path="/patients" element={<Patients />} />
         <Route path="/report" element={<Report />} />
         <Route path="/report/:id" element={<Report />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
       </Routes>
     </BrowserRouter>
   )

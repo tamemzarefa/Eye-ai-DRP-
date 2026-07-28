@@ -78,14 +78,10 @@ export default function Dashboard() {
       setError('')
 
       try {
-        const [patientsResponse, userResponse] = await Promise.all([
-          get('/patients'),
-          get('/auth/me'),
-        ])
-
+        const patientsResponse = await get('/patients')
         const patientList = patientsResponse.data ?? patientsResponse
         setPatients(patientList)
-        setUser(userResponse)
+        setUser({ name: 'دكتور', email: '' })
 
         const counts = { active: 0, inactive: 0, archived: 0 }
         patientList.forEach((patient) => {
@@ -95,9 +91,6 @@ export default function Dashboard() {
       } catch (err) {
         console.error(err)
         setError(err.message || 'فشل تحميل بيانات المرضى.')
-        if (err.response?.status === 401) {
-          navigate('/login')
-        }
       } finally {
         setLoading(false)
       }

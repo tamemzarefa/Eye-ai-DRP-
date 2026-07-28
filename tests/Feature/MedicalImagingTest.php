@@ -76,6 +76,35 @@ class MedicalImagingTest extends TestCase
     }
 
     /**
+     * Test FastAPI returning a JSON string response instead of an object.
+     */
+    public function test_can_handle_fastapi_json_string_response(): void
+    {
+        Http::fake([
+            '*/predict' => Http::response('{
+                "prediction": "No Diabetic Retinopathy",
+                "confidence": 0.985
+            }', Response::HTTP_OK),
+        ]);
+
+        $fakeImage = UploadedFile::fake()->image('eye_scan.jpg', 600, 600);
+
+        $response = $this->actingAs($this->user, 'sanctum')
+            ->postJson(route('medical-imaging.analyze'), [
+                'eye_image' => $fakeImage,
+            ]);
+
+        $response->assertStatus(Response::HTTP_OK);
+        $response->assertJson([
+            'success' => true,
+            'data' => [
+                'prediction' => 'No Diabetic Retinopathy',
+                'confidence' => 0.985,
+            ],
+        ]);
+    }
+
+    /**
      * Test request validation when the image is missing or invalid.
      */
     public function test_fails_validation_when_image_is_missing(): void

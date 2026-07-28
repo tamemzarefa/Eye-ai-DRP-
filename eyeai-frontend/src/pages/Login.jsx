@@ -3,6 +3,12 @@ import { useNavigate } from 'react-router-dom'
 import { post, setToken } from '../lib/api'
 import logo from '../assets/logo.png'
 
+function readErrorMessage(err) {
+  if (err?.message) return err.message
+  if (err?.data?.message) return err.data.message
+  return 'فشل تسجيل الدخول. تحقق من البيانات وحاول مرة أخرى.'
+}
+
 export default function Login() {
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
@@ -18,11 +24,15 @@ export default function Login() {
     try {
       setError('')
       const data = await post('/auth/login', { email, password })
+      if (!data?.token) {
+        throw new Error('Login did not return a token.')
+      }
+
       setToken(data.token)
-      navigate('/')
+      navigate('/', { replace: true })
     } catch (err) {
       console.error('خطأ بتسجيل الدخول:', err)
-      setError(err.message || 'فشل تسجيل الدخول. تحقق من البيانات وحاول مرة أخرى.')
+      setError(readErrorMessage(err))
     } finally {
       setLoading(false)
     }
